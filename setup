@@ -1,4 +1,6 @@
 print("moving files")
 local files = fs.find("*/pfcc")
-fs.move(files[1],"")
+print(fs.list("files"))
+
+fs.move(files[1],"pfcc")
 print("done moving")
