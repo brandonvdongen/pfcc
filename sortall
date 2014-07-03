@@ -1,0 +1,13 @@
+function text(message)
+term.clear()
+term.setCursorPos(1,1)
+print(message)
+end
+
+local lockersl = {peripheral.find("containers_betterstorage_lockerlarge")}
+local lockers = {peripheral.find("containers_betterstorage_locker")}
+local crates = {peripheral.find("containers_betterstorage_crate")}
+
+print(#lockersl)
+print(#lockers)
+print(#crates)
