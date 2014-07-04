@@ -25,3 +25,5 @@ crates[i].condenseItems()
 end
 
 text("done sorting")
+sleep(1)
+text("pfcc 0.1")
