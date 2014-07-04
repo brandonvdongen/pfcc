@@ -8,21 +8,21 @@ local lockersl = {peripheral.find("container_betterstorage_lockerlarge")}
 local lockers = {peripheral.find("container_betterstorage_locker")}
 local crates = {peripheral.find("container_betterstorage_crate")}
 
-print(#lockersl)
-print(#lockers)
-print(#crates)
-
 text("sorting larger lockers")
 for i=1,#lockersl do
+text("sorting large lockers: ".. i)
 lockersl[i].condenseItems()
 end
 
 text("sorting small lockers")
+text("sorting small locker: ".. i)
 for i=1,#lockers do
-lockersl[i].condenseItems()
+lockers[i].condenseItems()
 end
 
-text("sorting crates")
 for i=1,#crates do
-lockersl[i].condenseItems()
+text("sorting crate: ".. i)
+crates[i].condenseItems()
 end
+
+text("done sorting")
