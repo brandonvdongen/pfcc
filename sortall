@@ -11,3 +11,18 @@ local crates = {peripheral.find("container_betterstorage_crate")}
 print(#lockersl)
 print(#lockers)
 print(#crates)
+
+text("sorting larger lockers")
+for i=1,#lockersl do
+lockersl[i].condenseItems()
+end
+
+text("sorting small lockers")
+for i=1,#lockersl do
+lockersl[i].condenseItems()
+end
+
+text("sorting crates")
+for i=1,#lockersl do
+lockersl[i].condenseItems()
+end
