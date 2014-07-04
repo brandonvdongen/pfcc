@@ -18,11 +18,11 @@ lockersl[i].condenseItems()
 end
 
 text("sorting small lockers")
-for i=1,#lockersl do
+for i=1,#lockers do
 lockersl[i].condenseItems()
 end
 
 text("sorting crates")
-for i=1,#lockersl do
+for i=1,#crates do
 lockersl[i].condenseItems()
 end
