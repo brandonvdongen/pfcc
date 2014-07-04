@@ -14,9 +14,8 @@ text("sorting large lockers: ".. i)
 lockersl[i].condenseItems()
 end
 
-text("sorting small lockers")
-text("sorting small locker: ".. i)
 for i=1,#lockers do
+text("sorting small locker: ".. i)
 lockers[i].condenseItems()
 end
 
