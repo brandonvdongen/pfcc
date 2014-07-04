@@ -1,2 +1,4 @@
 shell.run("pastebin","run","fiVVVj9x")
+sleep(1)
+print("now running the newest CactOS")
 os.run({},"startup")
