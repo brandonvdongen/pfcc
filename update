@@ -1,4 +1,4 @@
 shell.run("pastebin","run","fiVVVj9x")
 sleep(1)
-print("now running the newest CactOS")
+print("update succesfull")
 os.run({},"startup")
