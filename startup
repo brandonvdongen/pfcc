@@ -5,3 +5,11 @@ end
 
 cls()
 print("FoxOS 1.0")
+
+file = fs.open("data","w")
+
+if file.readAll() == "core" then
+print("core is set, please change")
+else
+primt("a ok")
+end
