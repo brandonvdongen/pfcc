@@ -1,0 +1,830 @@
+//web stuff
+string database = "http://foxgear-server.tk/secondlife/undertale/core.php";
+key http_request_id;
+
+//position data
+vector hp1pos = <0.000000, -0.057556, 0.000000>;
+vector hp2pos = <0.000000, 0.051765, 0.000000>;
+vector hp1posd = <0.000000, -0.087600, 0.000000>;
+vector hp2posd = <0.000000, 0.081800, 0.000000>;
+
+vector encpos =<0.000000, 0.000000, 0.656247>;
+vector encsiz =<0.236737, 0.010000, 0.236737>;
+vector gopos =<0.000000, 0.000000, 1.046876>;
+vector gosiz =<1.282530, 0.038279, 0.906203>;
+
+//variables
+integer perms;
+integer battle = FALSE;
+integer debug = FALSE;
+integer encountered=FALSE;
+integer attacking=TRUE;
+integer god=FALSE;
+integer refuse=FALSE;
+string hptext;
+string fighttheme="enemy";
+string themeoverride="auto";
+key fighter=NULL_KEY;
+vector fightersize=<0,0,0>;
+integer actchannel = -1;
+string console;
+integer spareable=FALSE;
+integer mon_dead=FALSE;
+
+//timers
+integer invincible = 0;
+integer encountertime = 0;
+float attacktimer=0;
+
+//id's
+integer encounter;
+integer heartpiece1;
+integer heartpiece2;
+integer menubar;
+integer hp_bar;
+integer enemy_tag;
+integer attack_screen;
+integer attack_bar;
+
+//acts
+string check;
+string act1;
+string act2;
+string act3;
+string act1name;
+string act2name;
+string act3name;
+
+//enemy data
+float mon_hp_max=20;
+float mon_hp_cur=20;
+string mon_name="booper";
+string mon_info="dooper";
+string enemyexp="random.weak";
+integer mon_DEF=0;
+integer mon_ATK=0;
+
+
+//playerdata
+float hp_max=20;
+float hp_cur=20;
+integer XP=0;
+integer LOVE=1;
+integer Gold=0;
+string CharName="Console";
+integer WeaponATK=3;
+integer ATK=8;
+integer DEF=9;
+string weapon_name = "";
+string armor_name = "";
+
+announce(string text)
+{
+    string name=llGetObjectName();
+    llSetObjectName("*");
+    llSay(0,"/me "+text);
+    llSetObjectName(name);
+}
+ 
+init()
+{
+    expcheck();
+    llMessageLinked(LINK_THIS,404,"reset","");
+    actchannel=(integer)llFrand(9999999);
+    integer x = llGetNumberOfPrims()+1;
+    while(x
+    --)
+    {
+        if(llGetLinkName(x)=="heartpiece1")heartpiece1=x;
+        if(llGetLinkName(x)=="heartpiece2")heartpiece2=x;
+        if(llGetLinkName(x)=="encounter")encounter=x;
+        if(llGetLinkName(x)=="hp_bar")hp_bar=x;
+        if(llGetLinkName(x)=="menu_board")menubar=x;
+        if(llGetLinkName(x)=="enemy_tag")enemy_tag=x;
+        if(llGetLinkName(x)=="attack_screen")attack_screen=x;
+        if(llGetLinkName(x)=="attack_bar")attack_bar=x;
+    }
+    if(debug)llOwnerSay(llList2CSV(llGetLinkPrimitiveParams(encounter,[PRIM_POS_LOCAL,PRIM_SIZE])));
+    llSetText("All systems ready",<1,1,1>,0);
+    llSetLinkPrimitiveParams(hp_bar,[PRIM_TEXTURE, 0, "23aee8c9-e3b9-fc22-26ee-dbe3b009c4eb", <0.49000, 1.0, 0.0>, <((hp_cur/hp_max)/2)+.25, 0.0, 0.0>, 0.0 ]);
+    llRegionSayTo(llGetOwner(),-11,"utc.hud.ping");
+}
+
+refresh_hud()
+{
+    llSetLinkAlpha(hp_bar,1,ALL_SIDES);
+    llSetLinkAlpha(menubar,1,ALL_SIDES);
+    llMessageLinked(LINK_SET, 0, (string)llRound(hp_cur)+" / "+(string)llRound(hp_max), "fw_data : health");
+    llSetLinkPrimitiveParams(hp_bar,[PRIM_TEXTURE, 0, "23aee8c9-e3b9-fc22-26ee-dbe3b009c4eb", <0.49000, 1.0, 0.0>, <((hp_cur/hp_max)/2)+.25, 0.0, 0.0>, 0.0 ]);
+    llMessageLinked(LINK_SET, 0, CharName, "fw_data : name");
+    llMessageLinked(LINK_SET, 0, "LV"+(string)LOVE, "fw_data : love");
+    llMessageLinked(LINK_SET, 0, (string)llRound(hp_cur)+" / "+(string)llRound(hp_max), "fw_data : health");
+    llMessageLinked(LINK_SET, 0, "f=e8802ad4-4ae1-cb99-3a4c-772043270bd3", "fw_conf");
+    llSetLinkPrimitiveParams(menubar,[PRIM_TEXTURE,ALL_SIDES,"599e8bae-cb02-54f8-59df-c1f13763ddec",<1,0.2,0>,<0,0.4,0>,0]);
+}
+
+encounter_prepare()
+{
+mon_ATK=llCeil(llFrand(12));
+mon_DEF=llCeil(llFrand(10));
+mon_hp_max=mon_hp_cur=15+llCeil(llFrand(135));
+enemyexp="random.weak";    
+check="Check";
+act1="";
+act2="";
+act3="";
+act1name="";
+act2name="";
+act3name="";
+mon_name=llGetDisplayName(fighter);
+mon_info="you can't really tell anything about them...";
+fighttheme="enemy";
+encountered=TRUE;
+encountertime=50;
+llPlaySound("052a02e7-7e86-f5ad-0e56-5a95e9315c97",1);
+llSetLinkPrimitiveParamsFast(encounter,[PRIM_COLOR,ALL_SIDES,<1,1,1>,1]);
+mon_hp_cur=mon_hp_max;
+llSetTimerEvent(.1);
+}
+startEncounter()
+{
+    if(battle==FALSE)
+    {
+    if(themeoverride!="auto")fighttheme=themeoverride;
+    llMessageLinked(LINK_THIS,123,"track",fighter);
+    llRegionSayTo(llGetOwner(),11,"load/"+fighttheme);
+    llRegionSayTo(fighter,0,"use /10 spare to make yourself spareable :3");
+    encountered=FALSE;
+    battle=TRUE;
+    encountertime=-1;
+    if(fighttheme=="dating")announce("DATING START! *");
+    else if(themeoverride == "auto")announce("You encountered "+mon_name);
+    else announce(mon_name+" encounted "+CharName);
+    llSetLinkPrimitiveParamsFast(encounter,[PRIM_COLOR,ALL_SIDES,<1,1,1>,0]);
+    llSetLinkPrimitiveParamsFast(heartpiece1,[PRIM_POS_LOCAL,hp1pos,PRIM_LINK_TARGET,heartpiece2,PRIM_POS_LOCAL,hp2pos]);
+    llPlaySound("87232296-d05e-8e20-331b-280802878a8e",1);
+    llSetLinkPrimitiveParamsFast(heartpiece1,[PRIM_COLOR,ALL_SIDES,<1,0,0>,1,PRIM_COLOR,0,<0,0,0>,1]);
+    llSetLinkPrimitiveParamsFast(heartpiece2,[PRIM_COLOR,ALL_SIDES,<1,0,0>,1,PRIM_COLOR,0,<0,0,0>,1]);
+    //if(perms)llStartAnimation("hide");
+    llSleep(0.1);
+    llSetLinkPrimitiveParamsFast(heartpiece1,[PRIM_COLOR,ALL_SIDES,<1,0,0>,0]);
+    llSetLinkPrimitiveParamsFast(heartpiece2,[PRIM_COLOR,ALL_SIDES,<1,0,0>,0]);
+    //if(perms)llStopAnimation("hide");
+    llSleep(0.1);
+    llSetLinkPrimitiveParamsFast(heartpiece1,[PRIM_COLOR,ALL_SIDES,<1,0,0>,1,PRIM_COLOR,0,<0,0,0>,1]);
+    llSetLinkPrimitiveParamsFast(heartpiece2,[PRIM_COLOR,ALL_SIDES,<1,0,0>,1,PRIM_COLOR,0,<0,0,0>,1]);
+    //if(perms)llStartAnimation("hide");
+    llSleep(0.1);
+    fightersize=llGetAgentSize(fighter);
+    llRegionSayTo(llGetOwner(),11,"play");
+    llRegionSayTo(llGetOwner(),-11,"utc.battle.start");
+    }
+}
+stopEncounter()
+{    
+    if(mon_dead)
+    {
+    llSetTimerEvent(0);
+    llRegionSayTo(llGetOwner(),11,"stop");
+    llRegionSayTo(llGetOwner(),-11,"utc.battle.stop");
+    llSleep(1);
+    invincible = 0;
+    llSetText("",<1,1,1>,1);
+    llPlaySound("2c270b14-6c6a-87cb-00e6-e41601a0ba72",1);
+    llMessageLinked(LINK_THIS,123,"dead","");
+    llSleep(1.5);
+    llSetLinkPrimitiveParamsFast(heartpiece1,[PRIM_COLOR,ALL_SIDES,<1,0,0>,0]);
+    llSetLinkPrimitiveParamsFast(heartpiece2,[PRIM_COLOR,ALL_SIDES,<1,0,0>,0]);
+    //if(perms)llStopAnimation("hide");
+    battle=FALSE;
+    god=FALSE;
+    refuse=FALSE;
+    fighter=NULL_KEY;
+    llSetLinkAlpha(LINK_SET,0,ALL_SIDES);
+    llSleep(1);
+    llMessageLinked(LINK_THIS,123,"stop","");
+    if(enemy_tag)llSetLinkPrimitiveParamsFast(enemy_tag,[PRIM_TEXT,"",<1,1,1>,1,PRIM_POS_LOCAL,<0,0,0>,PRIM_TEXT,"",<1,1,1>,0,PRIM_SIZE,<0,0,0>]);
+    mon_dead=FALSE;
+    
+    expcheck();
+    }
+    else
+    {
+    llMessageLinked(LINK_THIS,123,"stop","");
+    llSetText("",<1,1,1>,1);
+    llSetTimerEvent(0);
+    invincible = 0;
+    
+    
+    llRegionSayTo(llGetOwner(),11,"stop");
+    llRegionSayTo(llGetOwner(),-11,"utc.battle.stop");
+    llSleep(1);
+    llSetLinkPrimitiveParamsFast(heartpiece1,[PRIM_COLOR,ALL_SIDES,<1,0,0>,0]);
+    llSetLinkPrimitiveParamsFast(heartpiece2,[PRIM_COLOR,ALL_SIDES,<1,0,0>,0]);
+    //if(perms)llStopAnimation("hide");
+    battle=FALSE;
+    god=FALSE;
+    refuse=FALSE;
+    fighter=NULL_KEY;
+    if(enemy_tag)llSetLinkPrimitiveParamsFast(enemy_tag,[PRIM_POS_LOCAL,<0,0,0>,PRIM_TEXT,"",<1,1,1>,0,PRIM_SIZE,<0,0,0>]);
+    llSetLinkAlpha(LINK_SET,0,ALL_SIDES);
+    }
+}
+encounterDead()
+{
+    llSetTimerEvent(0);
+    llSetText("",<1,1,1>,1);
+    llSetLinkPrimitiveParamsFast(heartpiece1,[PRIM_TEXTURE,ALL_SIDES,TEXTURE_BLANK, <1.0, 1.0, 0.0>, <0.0, 0.0, 0.0>, 0.0]);
+    llSetLinkPrimitiveParamsFast(heartpiece2,[PRIM_TEXTURE,ALL_SIDES,TEXTURE_BLANK, <1.0, 1.0, 0.0>, <0.0, 0.0, 0.0>, 0.0]);
+    llSetLinkTextureAnim(heartpiece1,FALSE, ALL_SIDES, 0, 0, 0.0, 0, 0);
+    llSetLinkTextureAnim(heartpiece2,FALSE, ALL_SIDES, 0, 0, 0.0, 0, 0);
+    invincible = 0;
+    llRegionSayTo(llGetOwner(),11,"stop");
+    llRegionSayTo(llGetOwner(),-11,"utc.battle.stop");
+    llSleep(1);
+    llPlaySound("8e62184c-dc77-d8f4-ac68-5ab7f6dfba39",1);
+    llSetLinkPrimitiveParamsFast(heartpiece1,[PRIM_POS_LOCAL,hp1posd,PRIM_LINK_TARGET,heartpiece2,PRIM_POS_LOCAL,hp2posd]);
+    if(refuse)
+    {
+    god=TRUE;
+    hp_cur=0;
+    hptext="0.1";
+    llRegionSayTo(llGetOwner(),11,"load/save the world");
+    llSleep(3);
+    llPlaySound("8e62184c-dc77-d8f4-ac68-5ab7f6dfba39",1);
+    llSetLinkPrimitiveParamsFast(heartpiece1,[PRIM_POS_LOCAL,hp1pos,PRIM_LINK_TARGET,heartpiece2,PRIM_POS_LOCAL,hp2pos]);
+    announce("but it refused");
+    llRegionSayTo(llGetOwner(),11,"play");
+    llSleep(2);
+    llSetTimerEvent(.1);
+    }
+    else if(!refuse)
+    {
+    llMessageLinked(LINK_THIS,123,"stop","");
+    llSleep(2);
+    llPlaySound("7598a900-e020-7d2d-238e-87202c898a83",1);
+    llSetLinkPrimitiveParamsFast(heartpiece1,[PRIM_COLOR,ALL_SIDES,<1,0,0>,0]);
+    llSetLinkPrimitiveParamsFast(heartpiece2,[PRIM_COLOR,ALL_SIDES,<1,0,0>,0]);
+        llParticleSystem(
+        [
+            PSYS_SRC_PATTERN,PSYS_SRC_PATTERN_ANGLE_CONE,
+            PSYS_SRC_BURST_RADIUS,0,
+            PSYS_SRC_ANGLE_BEGIN,1,
+            PSYS_SRC_ANGLE_END,0,
+            PSYS_SRC_TARGET_KEY,llGetKey(),
+            PSYS_PART_START_COLOR,<1.000000,0.000000,0.000000>,
+            PSYS_PART_END_COLOR,<1.000000,1.000000,1.000000>,
+            PSYS_PART_START_ALPHA,1,
+            PSYS_PART_END_ALPHA,1,
+            PSYS_PART_START_GLOW,0,
+            PSYS_PART_END_GLOW,0,
+            PSYS_PART_BLEND_FUNC_SOURCE,PSYS_PART_BF_SOURCE_ALPHA,
+            PSYS_PART_BLEND_FUNC_DEST,PSYS_PART_BF_ONE_MINUS_SOURCE_ALPHA,
+            PSYS_PART_START_SCALE,<0.200000,0.200000,0.000000>,
+            PSYS_PART_END_SCALE,<0.500000,0.500000,0.000000>,
+            PSYS_SRC_TEXTURE,"21ae2644-7052-4d86-91d9-616d89f1a5b5",
+            PSYS_SRC_MAX_AGE,1,
+            PSYS_PART_MAX_AGE,2,
+            PSYS_SRC_BURST_RATE,1,
+            PSYS_SRC_BURST_PART_COUNT,5,
+            PSYS_SRC_ACCEL,<0.000000,0.000000,-1.400000>,
+            PSYS_SRC_OMEGA,<0.000000,0.000000,0.000000>,
+            PSYS_SRC_BURST_SPEED_MIN,1,
+            PSYS_SRC_BURST_SPEED_MAX,1,
+            PSYS_PART_FLAGS,
+                0 |
+                PSYS_PART_EMISSIVE_MASK |
+                PSYS_PART_FOLLOW_VELOCITY_MASK
+        ]);
+    llSleep(3);
+    llParticleSystem([]);
+    llSetLinkPrimitiveParamsFast(encounter,[PRIM_SIZE,gosiz,PRIM_COLOR,ALL_SIDES,<1,1,1>,1]);
+    llSetLinkPrimitiveParamsFast(encounter,[PRIM_TEXTURE,3,"84684113-c332-7583-12cb-2636ef4b703f", <1.0, 1.0, 0.0>, <0.0, 0.0, 0.0>, 0.0]);
+    llSetLinkPrimitiveParamsFast(encounter,[PRIM_TEXTURE,1,"84684113-c332-7583-12cb-2636ef4b703f", <-1.0, 1.0, 0.0>, <0.0, 0.0, 0.0>, 0.0]);
+    llPlaySound("7df515ca-ccde-7e0a-5fdd-d6cce9336b98",1);
+    llSleep(10);
+    llPlaySound("3d658fdd-94a1-c4f3-280e-3e34eb8e97d0",1);
+    llSleep(10);
+    llPlaySound("cff25764-199c-cfa7-54d2-9fa4443812b9",1);
+    llSleep(5);
+    llSetLinkPrimitiveParamsFast(encounter,[PRIM_TEXTURE,3,"334cb0e3-284e-91cd-2ac9-d252fa9e58e9", <1.0, 1.0, 0.0>, <0.0, 0.0, 0.0>, 0.0]);
+    llSetLinkPrimitiveParamsFast(encounter,[PRIM_TEXTURE,1,"334cb0e3-284e-91cd-2ac9-d252fa9e58e9", <-1.0, 1.0, 0.0>, <0.0, 0.0, 0.0>, 0.0]);
+    llSetLinkPrimitiveParamsFast(encounter,[PRIM_SIZE,encsiz,PRIM_COLOR,ALL_SIDES,<1,1,1>,0]);
+    //if(perms)llStopAnimation("hide");
+    battle=FALSE;
+    hp_cur=hp_max;
+    fighter=NULL_KEY;
+    llSetLinkAlpha(LINK_SET,0,ALL_SIDES);
+    if(enemy_tag)llSetLinkPrimitiveParamsFast(enemy_tag,[PRIM_POS_LOCAL,<0,0,0>,PRIM_TEXT,"",<1,1,1>,0,PRIM_SIZE,<0,0,0>]);
+    }
+}
+
+expcheck()
+{
+integer sLOVE = LOVE;
+if(XP >= 10   )LOVE=2;
+if(XP >= 30   )LOVE=3;
+if(XP >= 70   )LOVE=4;
+if(XP >= 120  )LOVE=5;
+if(XP >= 200  )LOVE=6;
+if(XP >= 300  )LOVE=7;
+if(XP >= 500  )LOVE=8;
+if(XP >= 800  )LOVE=9;
+if(XP >= 1200 )LOVE=10;
+if(XP >= 1700 )LOVE=11;
+if(XP >= 2500 )LOVE=12;
+if(XP >= 3500 )LOVE=13;
+if(XP >= 5000 )LOVE=14;
+if(XP >= 7000 )LOVE=15;
+if(XP >= 10000)LOVE=16;
+if(XP >= 15000)LOVE=17;
+if(XP >= 25000)LOVE=18;
+if(XP >= 50000)LOVE=19;
+if(XP >= 99999)LOVE=20;
+if(sLOVE==LOVE)return;
+
+if(sLOVE<LOVE)
+{
+    announce("You gained LOVE");
+    integer oldmax=16+(sLOVE*4);
+    integer newmax=16+(LOVE*4);
+    hp_max=newmax;
+    hp_cur=hp_max-(oldmax-hp_cur);
+    ATK=8+(LOVE*2);
+    DEF=9+llCeil(LOVE/4);
+    if((WeaponATK+ATK) > 99)WeaponATK=99-ATK;
+}
+if(sLOVE>LOVE)announce("You lost LOVE");
+}
+
+integer IsInside (vector vMin, vector vMax, vector  pos)
+{
+    if ((pos.x < vMin.x)||(pos.y < vMin.y)||(pos.x > vMax.x)||(pos.y > vMax.y)){return FALSE;}
+    else{return TRUE;}
+}
+
+default
+{
+    state_entry()
+    {
+    llSetText("Initializing Permissions",<1,1,1>,1);
+    llListen(-11,"","","");
+    llListen(10,"","","");
+    llListen(13,"","","");
+    perms=FALSE;
+    llRequestPermissions(llGetOwner(), PERMISSION_TRIGGER_ANIMATION);
+    }
+    on_rez(integer x)
+    { 
+    perms=FALSE;
+    llRequestPermissions(llGetOwner(), PERMISSION_TRIGGER_ANIMATION);
+    }
+    run_time_permissions(integer perm)
+    {
+        if (perm & PERMISSION_TRIGGER_ANIMATION)
+        {
+        perms = TRUE;
+        llMessageLinked(LINK_SET, 0, "", "fw_reset");
+        llSetText("Permissions initialized, Preparing Text Controller.",<1,1,1>,1);
+        }
+        else
+        {
+        llSetText("no permissions no game!",<1,1,1>,1);
+        llDetachFromAvatar();
+        }
+    }
+    collision_start(integer x)
+    {
+        if(llDetectedType(0) & AGENT && !encountered && !battle && fighter == NULL_KEY)
+        {
+        fighter=llDetectedKey(0);
+        encountered=TRUE;
+        encounter_prepare();
+        }
+        if((llDetectedType(0) &  ACTIVE || llDetectedType(0) &  AGENT) && battle && llGetOwnerKey(llDetectedKey(0))==fighter)
+        {
+            if(god)
+            {
+                hp_cur=hp_cur+1;
+                integer i = 0;
+                hptext="00.";
+                if(hp_cur < 150)
+                {
+                    while(i < hp_cur) 
+                    {
+                    hptext+="0";
+                    i++;
+                    }
+                    hptext+="1";
+                }
+                else
+                {
+                llSetText("HP :00.000["+(string)(hp_cur-5)+"x0]00.1/20",<1,1,1>,1);
+                }
+            }
+            else if(invincible==-1)
+            {
+                llPlaySound("d300d81d-abbe-4a5c-0c71-a778b42ba960",1);
+                llSetLinkPrimitiveParamsFast(heartpiece1,[PRIM_TEXTURE,ALL_SIDES,"c3d0ab36-e0b0-4700-432c-7d0c18cecfec", <1.0, 1.0, 0.0>, <0.0, 0.0, 0.0>, 0.0,PRIM_COLOR,ALL_SIDES,<1,0,0>,1,PRIM_COLOR,0,<0,0,0>,1]);
+                llSetLinkPrimitiveParamsFast(heartpiece2,[PRIM_TEXTURE,ALL_SIDES,"c3d0ab36-e0b0-4700-432c-7d0c18cecfec", <1.0, 1.0, 0.0>, <0.0, 0.0, 0.0>, 0.0,PRIM_COLOR,ALL_SIDES,<1,0,0>,1,PRIM_COLOR,0,<0,0,0>,1]);
+                llSetLinkTextureAnim(heartpiece1, ANIM_ON | LOOP, ALL_SIDES, 4, 1, 0.0, 4.0, 10 );
+                llSetLinkTextureAnim(heartpiece2, ANIM_ON | LOOP, ALL_SIDES, 4, 1, 0.0, 4.0, 10 );
+                invincible=4;
+                hp_cur=hp_cur-1;
+                refresh_hud();
+                if(hp_cur <= 0)encounterDead();
+            }
+        }
+    }
+    touch_start(integer x)
+    {
+        if(llDetectedKey(0)==llGetOwner())
+        {
+            if(encountered)
+            {
+            string http_body = "method=get&uuid="+(string)fighter;    
+            http_request_id = llHTTPRequest(database, [HTTP_METHOD,"POST",HTTP_MIMETYPE,"application/x-www-form-urlencoded"], http_body);
+            refresh_hud();
+            return;
+            }
+        
+            integer link    = llDetectedLinkNumber(0);
+            integer face    = llDetectedTouchFace(0);
+            vector  touchST = llDetectedTouchST(0);
+            if(console=="attack" && link == attack_bar)
+            {
+            integer hit=FALSE;
+            float distance = (-(llVecDist(<attacktimer,0,0>,<5,0,0>)-5)/5)*2.2;
+            if(distance>2){hit=TRUE;llRegionSayTo(llGetOwner(),-11,"utc.battle.hit.hard");}
+            else if(distance>1.6){hit=TRUE;llRegionSayTo(llGetOwner(),-11,"utc.battle.hit.normal");}
+            else if(distance>0.8){hit=TRUE;llRegionSayTo(llGetOwner(),-11,"utc.battle.hit.weak");}
+            else llRegionSayTo(llGetOwner(),-11,"utc.battle.hit.miss");
+            float damage = (WeaponATK+ATK-mon_DEF+llFrand(2))*distance;
+            if(damage < 1)damage=1;
+            mon_hp_cur-=damage;
+            
+            llTriggerSound("85a4467c-46af-486f-2a1b-292bf16e69d3",1);
+            
+            
+            //4f9c4fd4-9730-797b-1f50-e189059a52f5
+            llSetLinkAlpha(enemy_tag,1,ALL_SIDES);
+            llSetLinkTextureAnim(enemy_tag,ANIM_ON, ALL_SIDES, 3, 3, 0.0, 9.0, 9 );
+            llSleep(1);
+            llSetLinkAlpha(enemy_tag,0,ALL_SIDES);
+            llSetLinkTextureAnim(enemy_tag,FALSE, ALL_SIDES, 0, 0, 0.0, 0, 0);
+            if(hit)llTriggerSound("2b7d9708-4176-0f1d-2bdb-91252c1ddd48",1);
+            hit=FALSE;
+            llSetLinkAlpha(attack_screen,0,ALL_SIDES);
+            llSetLinkAlpha(attack_bar,0,ALL_SIDES);
+            llSetLinkPrimitiveParams(attack_bar,[PRIM_SLICE,<0,0,0>]);
+            attacking=FALSE;
+            refresh_hud();
+            console="";
+            return;
+            }
+            if(link == menubar && menubar != 0 && battle==TRUE)
+            {
+                if(console=="act")
+                {
+                llMessageLinked(LINK_SET, 0, "", "fw_delbox : act1");
+                llMessageLinked(LINK_SET, 0, "", "fw_delbox : act2");
+                llMessageLinked(LINK_SET, 0, "", "fw_delbox : act3");
+                llMessageLinked(LINK_SET, 0, "", "fw_delbox : check");
+                console="";
+                }
+                if(console=="mercy")
+                {
+                llMessageLinked(LINK_SET, 0, "", "fw_delbox : spare");
+                llMessageLinked(LINK_SET, 0, "", "fw_delbox : flee");
+                console="";
+                }
+                if(IsInside(<0.01425, 0.11831, 0.00000>,<0.19502, 0.88139, 0.00000>,touchST))//fight
+                {
+                llPlaySound("74fbf15c-5661-24d8-72c9-daa993fa2d90",1);
+                llSetLinkPrimitiveParams(menubar,[PRIM_TEXTURE,ALL_SIDES,"599e8bae-cb02-54f8-59df-c1f13763ddec",<1,0.2,0>,<0,0.2,0>,0]);
+                llSetLinkPrimitiveParams(attack_screen,[PRIM_TEXTURE,ALL_SIDES,"75d393fd-6103-9b4d-2550-73884a28e044", <1.0, 1.0, 0.0>, <0.0, 0.0, 0.0>, 0.0]);
+                llSetLinkAlpha(attack_screen,1,ALL_SIDES);
+                llSetLinkAlpha(attack_bar,1,ALL_SIDES);
+                llSetLinkPrimitiveParams(attack_bar,[PRIM_SLICE,<1,1,0>]);
+                console="attack";
+                attacktimer=11;
+                }
+                if(IsInside(<0.27193, 0.10383, 0.00000>,<0.45172, 0.87184, 0.00000>,touchST))//act
+                {
+                llSetLinkPrimitiveParams(attack_bar,[PRIM_SLICE,<0,0,0>]);
+                llPlaySound("74fbf15c-5661-24d8-72c9-daa993fa2d90",1);
+                llSetLinkPrimitiveParams(menubar,[PRIM_TEXTURE,ALL_SIDES,"599e8bae-cb02-54f8-59df-c1f13763ddec",<1,0.2,0>,<0,0,0>,0]);
+                llSetLinkPrimitiveParams(attack_screen,[PRIM_TEXTURE,ALL_SIDES,"be1560ed-2ce7-cd63-b66b-b72411cd82ae", <1.0, 1.0, 0.0>, <0.0, 0.0, 0.0>, 0.0]);
+                llSetLinkAlpha(attack_screen,1,ALL_SIDES);
+                
+                if(check!= "")llMessageLinked(LINK_SET, 0,"* "+check , "fw_addbox : check : console :  2, 1, 20, 2");
+                if(act1!= "")llMessageLinked(LINK_SET, 0, "* "+act1name , "fw_addbox : act1 : console :  2, 3, 20, 2");
+                if(act2!= "")llMessageLinked(LINK_SET, 0, "* "+act2name , "fw_addbox : act2 : console :  24, 1, 20, 2");
+                if(act3!= "")llMessageLinked(LINK_SET, 0, "* "+act3name , "fw_addbox : act3 : console :  24, 3, 20, 2");
+                if(fighttheme == "dating")llMessageLinked(LINK_SET, 0, "* Flirt", "fw_data : act1");
+                console="act";
+                }
+                if(IsInside(<0.54141, 0.11648, 0.00000>,<0.72125, 0.88627, 0.00000>,touchST))//item
+                {
+                llSetLinkPrimitiveParams(attack_bar,[PRIM_SLICE,<0,0,0>]);
+                llPlaySound("74fbf15c-5661-24d8-72c9-daa993fa2d90",1);
+                llSetLinkPrimitiveParams(menubar,[PRIM_TEXTURE,ALL_SIDES,"599e8bae-cb02-54f8-59df-c1f13763ddec",<1,0.2,0>,<0,-0.2,0>,0]);
+                llSetLinkPrimitiveParams(attack_screen,[PRIM_TEXTURE,ALL_SIDES,"be1560ed-2ce7-cd63-b66b-b72411cd82ae", <1.0, 1.0, 0.0>, <0.0, 0.0, 0.0>, 0.0]);
+                llSetLinkAlpha(attack_screen,1,ALL_SIDES);
+                llOwnerSay("you have no items");
+                console="items";
+                }
+                if(IsInside(<0.80288, 0.10697, 0.00000>,<0.98345, 0.88834, 0.00000>,touchST))//mercy
+                {
+                llSetLinkPrimitiveParams(attack_bar,[PRIM_SLICE,<0,0,0>]);
+                llPlaySound("74fbf15c-5661-24d8-72c9-daa993fa2d90",1);
+                llSetLinkPrimitiveParams(menubar,[PRIM_TEXTURE,ALL_SIDES,"599e8bae-cb02-54f8-59df-c1f13763ddec",<1,0.2,0>,<0,-0.4,0>,0]);
+                llSetLinkPrimitiveParams(attack_screen,[PRIM_TEXTURE,ALL_SIDES,"be1560ed-2ce7-cd63-b66b-b72411cd82ae", <1.0, 1.0, 0.0>, <0.0, 0.0, 0.0>, 0.0]);
+                llSetLinkAlpha(attack_screen,1,ALL_SIDES);
+                    if(spareable)
+                    {
+                    llMessageLinked(LINK_SET, 0, "<!c=yellow>* Spare", "fw_addbox : spare : console :  2, 1, 20, 2");
+                    }
+                    else 
+                    {
+                    llMessageLinked(LINK_SET, 0, "* Spare", "fw_addbox : spare : console :  2, 1, 20, 2");
+                    }
+                llMessageLinked(LINK_SET, 0, "* Flee", "fw_addbox : flee : console :  2, 3, 20, 2");
+                console="mercy";
+                }
+            return;
+            }
+            llMessageLinked(LINK_SET, 0, "Some user data", "fw_touchquery:" + (string)link + ":" + (string)face);
+        } 
+    }
+    listen(integer channel,string name,key id,string msg)
+    {
+        if(channel==10 && id==fighter && msg=="spare")
+        {
+        spareable=TRUE;
+        }
+        if(channel==10 && msg=="utc.stats")
+        {
+            llSay(0,
+            "\n*UNDERTALE COMBAT STATS*"+
+            "\nATK: "+(string)ATK+"("+(string)(WeaponATK+ATK)+") DEF: "+(string)DEF+
+            "\nHealth: "+(string)llRound(hp_cur)+"/"+(string)llRound(hp_max)+
+            "\nXP: "+(string)XP+
+            "\nLOVE: "+(string)LOVE+
+            "\nGold: "+(string)Gold+
+            "\nEquiped Weapon: "+(string)weapon_name+
+            "\nEquiped Armor: "+(string)armor_name
+            );
+            
+        }
+        list data=llCSV2List(msg);
+        llOwnerSay(llList2String(data,1));
+        if(llGetOwnerKey(id)==llGetOwner() || llList2String(data,1)==(string)llGetOwner())
+        {
+            if(channel == 13)
+            {
+            themeoverride=msg;
+            return;
+            }
+            if(channel == -11)
+            {
+                if(llList2String(data,0)=="utc.name")
+                {
+                    CharName=llList2String(data,1);
+                    llOwnerSay("character name set to:"+CharName);
+                }
+                if(llList2String(data,0)=="utc.weapon.ping")
+                {
+                llRegionSayTo(id,-11,"utc.hud.pong");
+                }
+                if(llList2String(data,0)=="utc.weapon.pong")
+                {
+                WeaponATK=(integer)llList2String(data,1);
+                if((WeaponATK+ATK) > 99)WeaponATK=99-ATK;
+                weapon_name=llList2String(data,2);
+                announce("You equipped "+llList2String(data,2));
+                }
+                if(llList2String(data,0)=="utc.weapon.detach")
+                {
+                WeaponATK=0;
+                announce("You unequiped "+weapon_name);
+                weapon_name="";
+                }
+            }
+            if(channel==10 && id=="ea439eae-b90a-424e-98b5-9fa4fecee4fd")
+            {
+                if(msg == "utc.battle.start" && !battle)
+                {
+                encounter_prepare();
+                fighter=llGetOwner();
+                mon_name="DEBUGGER";
+                mon_info="it seems buggy";
+                startEncounter();
+                refresh_hud();
+                }
+                if(msg == "utc.battle.stop")
+                {
+                stopEncounter();
+                }
+                if(msg == "utc.gameover")
+                {
+                encounterDead();
+                }
+                if(msg == "dtm!")
+                {
+                refuse=TRUE;
+                announce("*You are filled with DETERMINATION");
+                }
+            }
+        }
+    }
+    link_message(integer sender, integer num, string str, key id) 
+    {
+        
+        if (id == "fw_ready") 
+        {
+            llSetText("Text Controller Initialized, Preparing Hud.",<1,1,1>,1);
+            llMessageLinked(LINK_SET, 0, "", "fw_addbox : name : status bar :  0, 0, 6, 1");
+            llMessageLinked(LINK_SET, 0, "", "fw_addbox : love : status bar :  7, 0, 4, 1");
+            llMessageLinked(LINK_SET, 0, "", "fw_addbox : hptag : status bar :  14, 0, 2, 1");
+            llMessageLinked(LINK_SET, 0, "", "fw_addbox : health : status bar :  20, 0, 7, 1");
+            init();
+        }
+        
+        
+        if (id == "fw_touchreply") {
+        list     tokens    = llParseStringKeepNulls(str, [":"], []);
+        string   boxName   = llList2String(tokens, 0);
+        integer  dx        = llList2Integer(tokens, 1);
+        integer  dy        = llList2Integer(tokens, 2);
+        string   rootName  = llList2String(tokens, 3);
+        integer  x         = llList2Integer(tokens, 4);
+        integer  y         = llList2Integer(tokens, 5);
+        string   userData  = llList2String(tokens, 6);
+ 
+        if(console=="mercy")
+        {
+            if(boxName == "spare" || boxName=="flee")
+            {
+            llMessageLinked(LINK_SET, 0, "", "fw_delbox : spare");
+            llMessageLinked(LINK_SET, 0, "", "fw_delbox : flee");
+            console="";
+            llSetLinkAlpha(attack_screen,0,ALL_SIDES);
+            }
+            if (boxName == "spare") 
+            {
+                llTriggerSound("74fbf15c-5661-24d8-72c9-daa993fa2d90",1);
+                if(spareable)
+                {
+                llPlaySound("2c270b14-6c6a-87cb-00e6-e41601a0ba72",1);
+                integer prize=(integer)llFrand(25);
+                announce("* YOU WON");
+                announce("You earned 0 XP and "+(string)prize+" gold");
+                Gold=Gold+prize;
+                spareable=FALSE;
+                stopEncounter();
+                }
+                else
+                {
+                announce(CharName+" is sparing you");
+                refresh_hud();
+                }
+            } 
+            else if (boxName == "flee") 
+            {
+                llTriggerSound("515335f8-8177-ca7f-a0cc-d4718207a2fa",1);
+                announce("Escaped...");
+                stopEncounter();
+            }
+        }
+        if(console=="act")
+        {
+            if (boxName == "check") 
+            {
+                llPlaySound("74fbf15c-5661-24d8-72c9-daa993fa2d90",1);
+                if(fighttheme=="dating")
+                {
+                announce("You flirt with "+llGetDisplayName(fighter));
+                } 
+                else
+                {
+                announce("You check "+mon_name+", "+mon_info);
+                }    
+            } 
+            else if (boxName == "act1") 
+            {
+                announce(act1);
+                llPlaySound("74fbf15c-5661-24d8-72c9-daa993fa2d90",1);
+            }
+            else if (boxName == "act2") 
+            {
+                announce(act2);
+                llPlaySound("74fbf15c-5661-24d8-72c9-daa993fa2d90",1);
+            }
+            else if (boxName == "act3") 
+            {
+                announce(act3);
+                llPlaySound("74fbf15c-5661-24d8-72c9-daa993fa2d90",1);
+            }
+            if(boxName=="act1" || boxName=="act2" || boxName=="act3" || boxName=="check")
+            {
+            if(act1 != "")llMessageLinked(LINK_SET, 0, "", "fw_delbox : act1");
+            if(act2 != "")llMessageLinked(LINK_SET, 0, "", "fw_delbox : act2");
+            if(act3 != "")llMessageLinked(LINK_SET, 0, "", "fw_delbox : act3");
+            if(check != "")llMessageLinked(LINK_SET, 0, "", "fw_delbox : check");
+            console="";
+            llSetLinkAlpha(attack_screen,0,ALL_SIDES);
+            refresh_hud();
+            }
+        }
+        
+    }
+}
+    timer()
+    {
+        if(mon_hp_cur<=0)
+        {
+        mon_dead=TRUE;
+        integer prize=(integer)llFrand(25);
+        integer xpprize;
+        announce("YOU WON");
+        Gold=Gold+prize;
+        if(enemyexp=="random.weak")xpprize=(integer)llRound(llFrand(25));
+        else if(enemyexp=="random.normal")xpprize=(integer)llRound(llFrand(50));
+        else if(enemyexp=="random.strong")xpprize=(integer)llRound(llFrand(250));
+        else if(enemyexp=="boss.weak")xpprize=(integer)llRound(llFrand(1000));
+        else if(enemyexp=="boss.strong")xpprize=(integer)llRound(llFrand(10000));
+        else xpprize=(integer)enemyexp;
+        announce("You earned "+(string)xpprize+" XP and "+(string)prize+" gold");
+        XP=XP+xpprize;
+        stopEncounter();
+        return;
+        }
+        if(console=="attack")
+        {
+            if(attacktimer--)
+            {
+            llSetLinkPrimitiveParamsFast(attack_bar,[PRIM_TEXTURE,ALL_SIDES,"0072b206-9edb-dffc-b21c-3ded74ad7ba4", <1.0, 1.0, 0.0>, <(attacktimer*0.09091)+0.05, 0.0, 0.0>, 0.0]);
+            }
+            if(attacktimer < 0.1)
+            {
+            llSetLinkAlpha(attack_screen,0,ALL_SIDES);
+            llSetLinkAlpha(attack_bar,0,ALL_SIDES);
+            llSetLinkPrimitiveParams(attack_bar,[PRIM_SLICE,<0,0,0>]);
+            attacking=FALSE;
+            refresh_hud();
+            console="";
+            return;
+            }
+        }
+        if(invincible>0){invincible--;}
+        if(encountertime>0){encountertime--;}
+        if(invincible == 0)
+        {
+            llSetLinkPrimitiveParamsFast(heartpiece1,[PRIM_TEXTURE,ALL_SIDES,TEXTURE_BLANK, <1.0, 1.0, 0.0>, <0.0, 0.0, 0.0>, 0.0]);
+            llSetLinkPrimitiveParamsFast(heartpiece2,[PRIM_TEXTURE,ALL_SIDES,TEXTURE_BLANK, <1.0, 1.0, 0.0>, <0.0, 0.0, 0.0>, 0.0]);
+            llSetLinkTextureAnim(heartpiece1,FALSE, ALL_SIDES, 0, 0, 0.0, 0, 0);
+            llSetLinkTextureAnim(heartpiece2,FALSE, ALL_SIDES, 0, 0, 0.0, 0, 0);
+            invincible=-1;
+        }
+        if(encountertime == 0)
+        {
+            llSetLinkPrimitiveParamsFast(encounter,[PRIM_COLOR,ALL_SIDES,<1,1,1>,0]);
+            encountered=FALSE;
+            encountertime=-1;
+            fighter=NULL_KEY;
+        }
+        
+        if(debug)llSetText((string)encountertime,<1,1,1>,1);
+        if(debug)llSetText((string)invincible,<1,1,1>,1);
+        if(encountered == FALSE && battle == FALSE)
+        {
+        llSetTimerEvent(0);
+        if(enemy_tag)llSetLinkPrimitiveParamsFast(enemy_tag,[PRIM_POS_LOCAL,<0,0,0>,PRIM_TEXT,"",<1,1,1>,0]);
+        }
+    if(enemy_tag && battle)llSetLinkPrimitiveParamsFast(enemy_tag,[PRIM_TEXT,"ATK: "+(string)mon_ATK+" | DEF: "+(string)mon_DEF+"\nHP:"+(string)llRound(mon_hp_cur)+"/"+(string)llRound(mon_hp_max),<1,1,1>,1]);
+    }
+    http_response(key request_id, integer status, list metadata, string body)
+    {  
+        if(request_id == http_request_id)
+        {       
+            list alldata = llParseString2List(body,["/"],[""]);
+            integer x=llGetListLength(alldata);
+            while(x--)
+            {
+                list subdata=llParseString2List(llList2String(alldata,x),["|"],[""]);
+                if(llList2String(subdata,0) == "NAME")mon_name=llList2String(subdata,1);
+                if(llList2String(subdata,0) == "ACT1"){act1name=llList2String(subdata,1);act1=llList2String(subdata,2);}
+                if(llList2String(subdata,0) == "ACT2"){act2name=llList2String(subdata,1);act2=llList2String(subdata,2);}
+                if(llList2String(subdata,0) == "ACT3"){act3name=llList2String(subdata,1);act3=llList2String(subdata,2);}
+                if(llList2String(subdata,0) == "INFO")mon_info=llList2String(subdata,1);
+                if(llList2String(subdata,0) == "SONG")fighttheme=llList2String(subdata,1);
+                if(llList2String(subdata,0) == "EXP")enemyexp=llList2String(subdata,1);
+            }
+            
+        
+        startEncounter();
+        }
+        state default;
+    }
+}

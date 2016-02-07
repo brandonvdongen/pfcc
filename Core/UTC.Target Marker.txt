@@ -1,0 +1,80 @@
+integer enemy_tag;
+key fighter=NULL_KEY;
+vector fightersize=<0,0,0>;
+default
+{
+    state_entry()
+    {
+        integer x = llGetNumberOfPrims()+1;
+        while(x--)
+        {
+        if(llGetLinkName(x)=="enemy_tag")enemy_tag=x;
+        }
+    }
+    link_message(integer sender, integer number, string str, key id)
+    {
+        if (number==123 && str == "track")
+        {
+        fighter=id;
+        fightersize=llGetAgentSize(fighter);
+        llSetTimerEvent(0.01);
+        }
+        if(number==123 && str == "stop")
+        {
+        llSetTimerEvent(0);
+        fighter=NULL_KEY;
+        llLinkParticleSystem(enemy_tag,[]);
+        llSetLinkPrimitiveParamsFast(enemy_tag,[PRIM_POS_LOCAL,<0,0,0>,PRIM_SIZE,<0,0,0>]);  
+        }
+        if(number==123 && str == "dead")
+        {
+            llLinkParticleSystem(enemy_tag,
+            [
+            PSYS_SRC_PATTERN,PSYS_SRC_PATTERN_EXPLODE,
+            PSYS_SRC_BURST_RADIUS,0.5,
+            PSYS_SRC_ANGLE_BEGIN,0,
+            PSYS_SRC_ANGLE_END,0,
+            PSYS_SRC_TARGET_KEY,llGetKey(),
+            PSYS_PART_START_COLOR,<1.000000,1.000000,1.000000>,
+            PSYS_PART_END_COLOR,<1.000000,1.000000,1.000000>,
+            PSYS_PART_START_ALPHA,1,
+            PSYS_PART_END_ALPHA,0,
+            PSYS_PART_START_GLOW,0,
+            PSYS_PART_END_GLOW,0,
+            PSYS_PART_BLEND_FUNC_SOURCE,PSYS_PART_BF_SOURCE_ALPHA,
+            PSYS_PART_BLEND_FUNC_DEST,PSYS_PART_BF_ONE_MINUS_SOURCE_ALPHA,
+            PSYS_PART_START_SCALE,<0.300000,0.100000,0.000000>,
+            PSYS_PART_END_SCALE,<0.031250,0.031250,0.000000>,
+            PSYS_SRC_TEXTURE,"5748decc-f629-461c-9a36-a35a221fe21f",
+            PSYS_SRC_MAX_AGE,0,
+            PSYS_PART_MAX_AGE,2,
+            PSYS_SRC_BURST_RATE,0.1,
+            PSYS_SRC_BURST_PART_COUNT,10,
+            PSYS_SRC_ACCEL,<0.000000,0.000000,1.700000>,
+            PSYS_SRC_OMEGA,<0.000000,0.000000,0.000000>,
+            PSYS_SRC_BURST_SPEED_MIN,0,
+            PSYS_SRC_BURST_SPEED_MAX,0,
+            PSYS_PART_FLAGS,
+                0 |
+                PSYS_PART_EMISSIVE_MASK |
+                PSYS_PART_FOLLOW_VELOCITY_MASK |
+                PSYS_PART_INTERP_COLOR_MASK |
+                PSYS_PART_INTERP_SCALE_MASK
+            ]);     
+        }
+        if(number==404 && str=="reset")
+        {
+        llResetScript();
+        }
+    }
+    timer()
+    {
+    vector target=(vector)llList2String(llGetObjectDetails(fighter,[OBJECT_POS]),0);
+    list data=llGetPrimitiveParams([PRIM_POSITION,PRIM_ROTATION]);  
+    vector setpos=(target-(vector)llList2String(data,0))/(rotation)llList2String(data,1);
+    vector ownersize=llGetAgentSize(llGetOwner());
+    llSetLinkPrimitiveParamsFast(enemy_tag,[PRIM_POS_LOCAL,(setpos-llGetLocalPos()+<0,0,fightersize.z/2>),PRIM_SIZE,(fightersize+<0.5,0.5,0.5>)]); 
+    }
+}
+    
+    
