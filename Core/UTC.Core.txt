@@ -1,5 +1,5 @@
 //web stuff
-string database = "http://foxgear-server.tk/secondlife/undertale/core.php";
+string database = "[removed for safety reasons]";
 key http_request_id;
 
 //position data
